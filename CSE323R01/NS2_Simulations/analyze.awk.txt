@@ -1,0 +1,65 @@
+BEGIN {
+    sent = 0
+    received = 0
+    dropped = 0
+    totalDelay = 0
+    startTime = 1000
+    endTime = 0
+    recvBytes = 0
+}
+
+{
+    event = $1
+    time = $2
+    pktType = $7
+    pktSize = $8
+    seq = $12
+    
+    if (time < startTime) startTime = time
+    if (time > endTime) endTime = time
+    
+    if (event == "s" && pktType == "tcp") {
+        sent++
+        sendTime[seq] = time
+    }
+    
+    if (event == "r" && pktType == "tcp") {
+        received++
+        recvBytes += pktSize
+        if (seq in sendTime) {
+            delay = time - sendTime[seq]
+            totalDelay += delay
+        }
+    }
+    
+    if (event == "D") {
+        dropped++
+    }
+}
+
+END {
+    simTime = endTime - startTime
+    if (received > 0)
+        avgDelay = totalDelay / received
+    else
+        avgDelay = 0
+    
+    if (simTime > 0)
+        throughput = (recvBytes * 8) / simTime / 1000
+    else
+        throughput = 0
+    
+    if (sent > 0)
+        pdr = (received / sent) * 100
+    else
+        pdr = 0
+    
+    print "===== Simulation Results ====="
+    print "Packets Sent:", sent
+    print "Packets Received:", received
+    print "Packets Dropped:", dropped
+    print "Packet Delivery Ratio (%):", pdr
+    print "Average End-to-End Delay (sec):", avgDelay
+    print "Throughput (Kbps):", throughput
+    print "Simulation Time (sec):", simTime
+}
